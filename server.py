@@ -5,6 +5,7 @@ import torch
 import argparse
 import numpy as np
 import onnxruntime
+from pytorch_lightning import seed_everything
 from diffusers import DiffusionPipeline
 from flask import Flask, request, jsonify
 
@@ -22,7 +23,7 @@ def parse_args():
     parser.add_argument("--port", type=int, default=8000, help="Port to run the server on")
     return parser.parse_args()
 
-CKPT_DIR = "checkpoints"
+CKPT_DIR = "data/checkpoints"
 SD_CKPT_DIR = os.path.join(CKPT_DIR, "sd_ckpt")
 VERIFIER_PATH = os.path.join(CKPT_DIR, "verifier.onnx")
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
@@ -36,8 +37,7 @@ def index():
 
 @app.route('/generate_image', methods=['POST'])
 def generate_image():
-    generator = torch.Generator()
-    generator = generator.manual_seed(42)
+    seed_everything(42)
     json_request = request.get_json(force=True)
     prompt = json_request['prompt']
     output_path = json_request['output_path']
@@ -48,7 +48,6 @@ def generate_image():
     start = time.time()
     checked_image_torch = pipeline(
         prompt,
-        generator = generator,
         height=requested_H,
         width=requested_W,
         num_images_per_prompt=1,
