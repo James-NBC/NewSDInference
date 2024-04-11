@@ -22,7 +22,7 @@ def parse_args():
     parser.add_argument("--port", type=int, default=8000, help="Port to run the server on")
     return parser.parse_args()
 
-CKPT_DIR = "data/checkpoints"
+CKPT_DIR = "checkpoints"
 SD_CKPT_DIR = os.path.join(CKPT_DIR, "sd_ckpt")
 VERIFIER_PATH = os.path.join(CKPT_DIR, "verifier.onnx")
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
