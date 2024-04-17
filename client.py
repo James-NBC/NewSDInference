@@ -16,16 +16,25 @@ def main():
     json_request = {
         "output_path": args.output_path,
         "prompt": args.prompt,
-        "C": 4,
+        "ddim_steps": 30,
         "H": 512,
         "W": 512,
-        "f": 8,
-        "ddim_steps": 25,
-        "scale": 7.5,
+        "txhash": "0x71d646c949928e46145dc3bc16af07c5b0861a90d4f707b100c5d97f9158424e55455",
     }
     response = requests.post(url, json=json_request)
-    print(response.status_code)
-    print(response.text)
+    # read image to bytes
+    from PIL import Image
+    import io
+    def image_to_bytes(image_path):
+        with open(image_path, 'rb') as img_file:
+            img_bytes = img_file.read()
+        return img_bytes
+    bytes_image = image_to_bytes(args.output_path)
+    json_result = response.json()
+    json_result["bytes"] = bytes_image
+    import json
+    with open('result.json', 'w') as f:
+        json.dump(json_result, f)
 
 if __name__ == "__main__":
     main()
