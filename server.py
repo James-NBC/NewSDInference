@@ -63,11 +63,11 @@ def generate_image():
     requested_height = json_request['H']
     requested_width = json_request['W']
     requested_ddim_steps = json_request['ddim_steps']
-    # requested_seed = json_request['seed']
-    # requested_tx_hash = json_request['tx_hash'][2:]
-    # big_num = 2**32
-    # requested_seed = int(requested_tx_hash, 16) % big_num
-    requested_seed = np.random.randint(0, 2**32 - 1)
+    requested_seed = json_request['seed']
+    requested_tx_hash = json_request['tx_hash'][2:]
+    big_num = 2**32
+    requested_seed = int(requested_tx_hash, 16) % big_num
+    # requested_seed = np.random.randint(0, 2**32 - 1)
     seed_everything(requested_seed)
     start = time.time()
     pil_images = pipeline(
