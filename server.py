@@ -89,6 +89,7 @@ def generate_image():
     checked_numpy_image = np.expand_dims(checked_numpy_image, axis=0)
     verified_embedding = verifier.run(None, {'input': checked_numpy_image.astype(np.float32)})[0].tolist()
     checked_image.save(output_path)
+    torch.cuda.empty_cache()
     return jsonify({"output_path": output_path, "embedding": verified_embedding, "time": time.time() - start, "seed": requested_seed})  
 
 if __name__ == "__main__":
