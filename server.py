@@ -31,12 +31,8 @@ VERIFIER_PATH = os.path.join(CKPT_DIR, "verifier.onnx")
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 pipeline = load_pipeline(CKPT_DIR, device)
 verifier = onnxruntime.InferenceSession(VERIFIER_PATH)
-safety_checker = StableDiffusionSafetyChecker.from_pretrained(
-    "CompVis/stable-diffusion-safety-checker"
-).to("cuda")
-feature_extractor = CLIPFeatureExtractor.from_pretrained(
-    "openai/clip-vit-base-patch32"
-)
+safety_checker = StableDiffusionSafetyChecker.from_pretrained(os.path.join(CKPT_DIR, "safety_checker")).to(device)
+feature_extractor = CLIPFeatureExtractor.from_pretrained(os.path.join(CKPT_DIR, "feature_extractor"))
 
 @app.route('/')
 def index():
@@ -61,8 +57,8 @@ def generate_image():
     requested_height = json_request['H']
     requested_width = json_request['W']
     requested_ddim_steps = json_request['ddim_steps']
-    seed = 0
-    seed_everything(seed)
+    requested_seed = json_request['seed']
+    seed_everything(requested_seed)
     start = time.time()
     pil_images = pipeline(
         prompt,
