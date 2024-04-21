@@ -67,7 +67,7 @@ def generate_image():
     # requested_tx_hash = json_request['tx_hash'][2:]
     # big_num = 2**32
     # requested_seed = int(requested_tx_hash, 16) % big_num
-    requested_seed = 42
+    requested_seed = np.random.randint(0, 2**32 - 1)
     seed_everything(requested_seed)
     start = time.time()
     pil_images = pipeline(
@@ -90,7 +90,7 @@ def generate_image():
     checked_numpy_image = np.expand_dims(checked_numpy_image, axis=0)
     verified_embedding = verifier.run(None, {'input': checked_numpy_image.astype(np.float32)})[0].tolist()
     checked_image.save(output_path)
-    return jsonify({"output_path": output_path, "embedding": verified_embedding, "time": time.time() - start})  
+    return jsonify({"output_path": output_path, "embedding": verified_embedding, "time": time.time() - start, "seed": requested_seed})  
 
 if __name__ == "__main__":
     args = parse_args()
