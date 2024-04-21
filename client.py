@@ -21,7 +21,7 @@ def main():
         "ddim_steps": 30,
         "H": 512,
         "W": 512,
-        "tx_hash": "0x343434354",
+        "txhash": "0x343434354",
     }
     response = requests.post(url, json=json_request)
     import json
