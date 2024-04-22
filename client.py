@@ -2,7 +2,7 @@ import requests
 import argparse
 import random
 
-API_NAME = "generate_image"
+API_NAME = "verify"
 
 def parse_args():
     parser = argparse.ArgumentParser("Stable Diffusion Inference")
@@ -22,8 +22,10 @@ def main():
         "H": 512,
         "W": 512,
         "txhash": "0x343434354",
+        "image_path": "./output.png",
     }
     response = requests.post(url, json=json_request)
+    print(response.text)
     import json
     with open('result.json', 'w') as f:
         json.dump(response.json(), f)

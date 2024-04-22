@@ -1,10 +1,8 @@
 import os
-import cv2
 import time
 import torch
 import argparse
 import numpy as np
-import onnxruntime
 from PIL import Image 
 from flask import Flask, request, jsonify
 from pytorch_lightning import seed_everything
@@ -18,7 +16,7 @@ app = Flask(__name__)
 def load_pipeline(ckpt_dir, device = None):
     if device is None:
         device = "cuda" if torch.cuda.is_available() else "cpu"
-    pipeline = DiffusionPipeline.from_pretrained(os.path.join(ckpt_dir, "sdxl_lightning")).to(device)
+    pipeline = DiffusionPipeline.from_pretrained(os.path.join(ckpt_dir, "Kai_Astra")).to(device)
     return pipeline
 
 def parse_args():
@@ -27,14 +25,10 @@ def parse_args():
     return parser.parse_args()
 
 CKPT_DIR = "checkpoints"
-VERIFIER_PATH = os.path.join(CKPT_DIR, "verifier.onnx")
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 pipeline = load_pipeline(CKPT_DIR, device)
-verifier = onnxruntime.InferenceSession(VERIFIER_PATH)
 safety_checker = StableDiffusionSafetyChecker.from_pretrained(os.path.join(CKPT_DIR, "safety_checker")).to("cuda")
 feature_extractor = CLIPFeatureExtractor.from_pretrained(os.path.join(CKPT_DIR, "feature_extractor"))
-
-EPS = 1e-6
 
 @app.route('/')
 def index():
@@ -53,7 +47,6 @@ def check_nsfw_images(images: list[Image.Image]):
 
 def to_generate(
     prompt: str = "A painting of a beautiful sunset over a calm lake",
-    output_path: str = "output.png",
     requested_height: int = 512,
     requested_width: int = 512,
     requested_ddim_steps: int = 30,
@@ -62,8 +55,8 @@ def to_generate(
     seed_everything(requested_seed)
     pil_images = pipeline(
         prompt,
-        height=1024,
-        width=1024,
+        height=requested_height,
+        width=requested_width,
         guidance_scale=2.0,
         num_images_per_prompt=1,
         num_inference_steps=requested_ddim_steps,
@@ -72,16 +65,12 @@ def to_generate(
     has_nsfw_concepts = check_nsfw_images(pil_images)
     checked_image = pil_images[0]
     # reshape from 1024x1024 to 512x512
-    checked_image = checked_image.resize((requested_width, requested_height))
+    if requested_height != 512:
+        checked_image = checked_image.resize((512, 512))
     if has_nsfw_concepts[0]:
-        checked_image = Image.new("RGB", (requested_width, requested_height), (0, 0, 0))
-    checked_numpy_image = np.array(checked_image).transpose(2, 0, 1)/255.0
-    # pil to numpy
-    checked_numpy_image = np.expand_dims(checked_numpy_image, axis=0)
-    verified_embedding = verifier.run(None, {'input': checked_numpy_image.astype(np.float32)})[0].tolist()
-    checked_image.save(output_path)
+        checked_image = Image.new("RGB", (512, 512), (0, 0, 0))
     torch.cuda.empty_cache()
-    return verified_embedding
+    return checked_image
 
 @app.route('/generate_image', methods=['POST'])
 def generate_image():
@@ -94,27 +83,28 @@ def generate_image():
     requested_tx_hash = json_request['txhash'][2:]
     requested_seed = int(requested_tx_hash, 16) % (2**32)
     start = time.time()
-    verified_embedding = to_generate(prompt, output_path, requested_height, requested_width, requested_ddim_steps, requested_seed)
+    generated_image = to_generate(prompt, requested_height, requested_width, requested_ddim_steps, requested_seed)
+    generated_image.save(output_path)
     torch.cuda.empty_cache()
-    return jsonify({"output_path": output_path, "embedding": verified_embedding, "time": time.time() - start, "seed": requested_seed})  
+    return jsonify({"output_path": output_path, "time": time.time() - start, "seed": requested_seed})  
 
 @app.route('/verify', methods=['POST'])
 def verify():
     json_request = request.get_json(force=True)
     prompt = json_request['prompt']
-    output_path = json_request['output_path']
     requested_height = json_request['H']
     requested_width = json_request['W']
     requested_ddim_steps = json_request['ddim_steps']
     requested_tx_hash = json_request['txhash'][2:]
-    embedding = json_request['embedding']
+    to_verify_image_path = json_request['image_path']
     requested_seed = int(requested_tx_hash, 16) % (2**32)
     # euclid distance
-    verified_embedding = to_generate(prompt, output_path, requested_height, requested_width, requested_ddim_steps, requested_seed)
-    distance = np.linalg.norm(np.array(embedding) - np.array(verified_embedding))
-    if distance < EPS:
-        return jsonify({"verified": True, "distance": distance, "verified_embedidng": verified_embedding})
-    return jsonify({"verified": False, "distance": distance, "verified_embedidng": verified_embedding})
+    generated_image = np.array(to_generate(prompt, requested_height, requested_width, requested_ddim_steps, requested_seed))
+    to_verify_image = np.array(Image.open(to_verify_image_path))
+    # compare 2 images with PIL
+    is_same = np.allclose(np.array(generated_image), np.array(to_verify_image), atol = 5.0, rtol = 1e-12)
+    print(is_same)
+    return jsonify({"verify": is_same})   
 
 if __name__ == "__main__":
     args = parse_args()
