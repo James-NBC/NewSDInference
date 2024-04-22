@@ -31,14 +31,10 @@ VERIFIER_PATH = os.path.join(CKPT_DIR, "verifier.onnx")
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 pipeline = load_pipeline(CKPT_DIR, device)
 verifier = onnxruntime.InferenceSession(VERIFIER_PATH)
-# safety_checker = StableDiffusionSafetyChecker.from_pretrained(os.path.join(CKPT_DIR, "safety_checker")).to(device)
-# feature_extractor = CLIPFeatureExtractor.from_pretrained(os.path.join(CKPT_DIR, "feature_extractor"))
-safety_checker = StableDiffusionSafetyChecker.from_pretrained(
-    "CompVis/stable-diffusion-safety-checker"
-).to("cuda")
-feature_extractor = CLIPFeatureExtractor.from_pretrained(
-    "openai/clip-vit-base-patch32"
-)
+safety_checker = StableDiffusionSafetyChecker.from_pretrained(os.path.join(CKPT_DIR, "safety_checker")).to("cuda")
+feature_extractor = CLIPFeatureExtractor.from_pretrained(os.path.join(CKPT_DIR, "feature_extractor"))
+
+EPS = 1e-6
 
 @app.route('/')
 def index():
@@ -55,20 +51,15 @@ def check_nsfw_images(images: list[Image.Image]):
     
     return has_nsfw_concepts
 
-@app.route('/generate_image', methods=['POST'])
-def generate_image():
-    json_request = request.get_json(force=True)
-    prompt = json_request['prompt']
-    output_path = json_request['output_path']
-    requested_height = json_request['H']
-    requested_width = json_request['W']
-    requested_ddim_steps = json_request['ddim_steps']
-    requested_tx_hash = json_request['txhash'][2:]
-    big_num = 2**32
-    requested_seed = int(requested_tx_hash, 16) % big_num
-    # requested_seed = np.random.randint(0, 2**32 - 1)
+def to_generate(
+    prompt: str = "A painting of a beautiful sunset over a calm lake",
+    output_path: str = "output.png",
+    requested_height: int = 512,
+    requested_width: int = 512,
+    requested_ddim_steps: int = 30,
+    requested_seed: int = 42,
+):
     seed_everything(requested_seed)
-    start = time.time()
     pil_images = pipeline(
         prompt,
         height=1024,
@@ -90,7 +81,40 @@ def generate_image():
     verified_embedding = verifier.run(None, {'input': checked_numpy_image.astype(np.float32)})[0].tolist()
     checked_image.save(output_path)
     torch.cuda.empty_cache()
+    return verified_embedding
+
+@app.route('/generate_image', methods=['POST'])
+def generate_image():
+    json_request = request.get_json(force=True)
+    prompt = json_request['prompt']
+    output_path = json_request['output_path']
+    requested_height = json_request['H']
+    requested_width = json_request['W']
+    requested_ddim_steps = json_request['ddim_steps']
+    requested_tx_hash = json_request['txhash'][2:]
+    requested_seed = int(requested_tx_hash, 16) % (2**32)
+    start = time.time()
+    verified_embedding = to_generate(prompt, output_path, requested_height, requested_width, requested_ddim_steps, requested_seed)
+    torch.cuda.empty_cache()
     return jsonify({"output_path": output_path, "embedding": verified_embedding, "time": time.time() - start, "seed": requested_seed})  
+
+@app.route('/verify', methods=['POST'])
+def verify():
+    json_request = request.get_json(force=True)
+    prompt = json_request['prompt']
+    output_path = json_request['output_path']
+    requested_height = json_request['H']
+    requested_width = json_request['W']
+    requested_ddim_steps = json_request['ddim_steps']
+    requested_tx_hash = json_request['txhash'][2:]
+    embedding = json_request['embedding']
+    requested_seed = int(requested_tx_hash, 16) % (2**32)
+    # euclid distance
+    verified_embedding = to_generate(prompt, output_path, requested_height, requested_width, requested_ddim_steps, requested_seed)
+    distance = np.linalg.norm(np.array(embedding) - np.array(verified_embedding))
+    if distance < EPS:
+        return jsonify({"verified": True, "distance": distance, "verified_embedidng": verified_embedding})
+    return jsonify({"verified": False, "distance": distance, "verified_embedidng": verified_embedding})
 
 if __name__ == "__main__":
     args = parse_args()
