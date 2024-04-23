@@ -1,22 +1,24 @@
 import os
+import cv2
 import time
 import torch
+import tempfile 
 import argparse
 import numpy as np
 from PIL import Image 
+import onnxruntime as ort
 from flask import Flask, request, jsonify
 from pytorch_lightning import seed_everything
 from diffusers import DiffusionPipeline
 from transformers import CLIPFeatureExtractor
 from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
 
-
 app = Flask(__name__)
 
 def load_pipeline(ckpt_dir, device = None):
     if device is None:
         device = "cuda" if torch.cuda.is_available() else "cpu"
-    pipeline = DiffusionPipeline.from_pretrained(os.path.join(ckpt_dir, "Kai_Astra")).to(device)
+    pipeline = DiffusionPipeline.from_pretrained(os.path.join(ckpt_dir, "sdxl_lightning")).to(device)
     return pipeline
 
 def parse_args():
@@ -29,6 +31,7 @@ device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cp
 pipeline = load_pipeline(CKPT_DIR, device)
 safety_checker = StableDiffusionSafetyChecker.from_pretrained(os.path.join(CKPT_DIR, "safety_checker")).to("cuda")
 feature_extractor = CLIPFeatureExtractor.from_pretrained(os.path.join(CKPT_DIR, "feature_extractor"))
+onnx_model = ort.InferenceSession(os.path.join(CKPT_DIR, "verifier.onnx"))
 
 @app.route('/')
 def index():
@@ -85,7 +88,6 @@ def generate_image():
     start = time.time()
     generated_image = to_generate(prompt, requested_height, requested_width, requested_ddim_steps, requested_seed)
     generated_image.save(output_path)
-    torch.cuda.empty_cache()
     return jsonify({"output_path": output_path, "time": time.time() - start, "seed": requested_seed})  
 
 @app.route('/verify', methods=['POST'])
@@ -99,12 +101,24 @@ def verify():
     to_verify_image_path = json_request['image_path']
     requested_seed = int(requested_tx_hash, 16) % (2**32)
     # euclid distance
-    generated_image = np.array(to_generate(prompt, requested_height, requested_width, requested_ddim_steps, requested_seed))
-    to_verify_image = np.array(Image.open(to_verify_image_path))
-    # compare 2 images with PIL
-    is_same = np.allclose(np.array(generated_image), np.array(to_verify_image), atol = 5.0, rtol = 1e-12)
-    print(is_same)
-    return jsonify({"verify": is_same})   
+    generated_image = to_generate(prompt, requested_height, requested_width, requested_ddim_steps, requested_seed)
+    temp_file_path = tempfile.mkstemp(suffix= os.path.basename(to_verify_image_path))[1]
+    generated_image.save(temp_file_path)
+    generated_image = cv2.imread(temp_file_path)
+    verify_image = cv2.imread(to_verify_image_path)
+    generated_image = (np.transpose(generated_image, (2, 0, 1))).astype(np.float32)
+    verify_image = (np.transpose(verify_image, (2, 0, 1))).astype(np.float32)
+    generated_image = np.expand_dims(generated_image, axis=0)
+    verify_image = np.expand_dims(verify_image, axis=0)
+    output1 = onnx_model.run(None, {'input': generated_image})[0]
+    output2 = onnx_model.run(None, {'input': verify_image})[0]
+    # similarity score
+    similarity = np.dot(output1, output2.T) / (np.linalg.norm(output1) * np.linalg.norm(output2))
+    similarity = max(float(similarity), 1.0)
+    if similarity > 0.995:
+        return jsonify({"verified": True, "similarity": float(similarity)})
+    return jsonify({"verified": False, "similarity": float(similarity)})
+
 
 if __name__ == "__main__":
     args = parse_args()

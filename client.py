@@ -1,6 +1,5 @@
 import requests
 import argparse
-import random
 
 API_NAME = "verify"
 
@@ -14,15 +13,14 @@ def parse_args():
 def main():
     args = parse_args()
     url = f"http://localhost:{args.port}/{API_NAME}"
-    random_seed = random.randint(0, 2**32 - 1)
     json_request = {
         "output_path": args.output_path,
         "prompt": args.prompt,
         "ddim_steps": 30,
-        "H": 512,
-        "W": 512,
+        "H": 1024,
+        "W": 1024,
         "txhash": "0x343434354",
-        "image_path": "./output.png",
+        "image_path": "./output.jpg",
     }
     response = requests.post(url, json=json_request)
     print(response.text)
