@@ -30,8 +30,8 @@ def parse_args():
 CKPT_DIR = "checkpoints"
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 pipeline = load_pipeline(CKPT_DIR, device)
-safety_checker = StableDiffusionSafetyChecker.from_pretrained(os.path.join(CKPT_DIR, "safety_checker")).to("cuda")
-feature_extractor = CLIPFeatureExtractor.from_pretrained(os.path.join(CKPT_DIR, "feature_extractor"))
+# safety_checker = StableDiffusionSafetyChecker.from_pretrained(os.path.join(CKPT_DIR, "safety_checker")).to("cuda")
+# feature_extractor = CLIPFeatureExtractor.from_pretrained(os.path.join(CKPT_DIR, "feature_extractor"))
 # preprocess_cfg = {'size': 224, 'mode': 'RGB', 'mean': (0.48145466, 0.4578275, 0.40821073), 'std': (0.26862954, 0.26130258, 0.27577711), 'interpolation': 'bicubic', 'resize_mode': 'shortest', 'fill_color': 0}
 # preprocess = image_transform_v2(
 #     PreprocessCfg(**preprocess_cfg),
