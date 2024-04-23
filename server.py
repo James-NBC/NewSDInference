@@ -72,8 +72,8 @@ def to_generate(
     seed_everything(requested_seed)
     pil_images = pipeline(
         prompt,
-        height=requested_height,
-        width=requested_width,
+        height=1024,
+        width=1024,
         guidance_scale=2.0,
         num_images_per_prompt=1,
         num_inference_steps=requested_ddim_steps,
