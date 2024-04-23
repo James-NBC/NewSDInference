@@ -39,6 +39,13 @@ feature_extractor = CLIPFeatureExtractor.from_pretrained(os.path.join(CKPT_DIR, 
 # )
 # verifier = torch.jit.load(os.path.join(CKPT_DIR, "verifier.pt"), map_location="cpu").eval()
 # verifier = build_model_from_openai_state_dict(verifier.state_dict(), cast_dtype = torch.float16).to(device)
+safety_checker = StableDiffusionSafetyChecker.from_pretrained(
+    "CompVis/stable-diffusion-safety-checker"
+).to("cuda")
+feature_extractor = CLIPFeatureExtractor.from_pretrained(
+    "openai/clip-vit-base-patch32"
+)
+
 
 @app.route('/')
 def index():
