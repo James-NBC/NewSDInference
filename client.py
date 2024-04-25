@@ -1,7 +1,7 @@
 import requests
 import argparse
 
-API_NAME = "verify"
+API_NAME = "generate_image"
 
 def parse_args():
     parser = argparse.ArgumentParser("Stable Diffusion Inference")
@@ -17,8 +17,8 @@ def main():
         "output_path": args.output_path,
         "prompt": args.prompt,
         "ddim_steps": 30,
-        "H": 1024,
-        "W": 1024,
+        "H": 512,
+        "W": 512,
         "txhash": "0x343434354",
         "image_path": "./output.jpg",
     }
