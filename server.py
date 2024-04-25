@@ -19,7 +19,7 @@ app = Flask(__name__)
 def load_pipeline(ckpt_dir, device = None):
     if device is None:
         device = "cuda" if torch.cuda.is_available() else "cpu"
-    pipeline = DiffusionPipeline.from_pretrained(os.path.join(ckpt_dir, "sdxl_lightning")).to(device)
+    pipeline = DiffusionPipeline.from_pretrained("runwayml/stable-diffusion-v1-5").to(device)
     return pipeline
 
 def parse_args():
@@ -30,15 +30,6 @@ def parse_args():
 CKPT_DIR = "checkpoints"
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 pipeline = load_pipeline(CKPT_DIR, device)
-# safety_checker = StableDiffusionSafetyChecker.from_pretrained(os.path.join(CKPT_DIR, "safety_checker")).to("cuda")
-# feature_extractor = CLIPFeatureExtractor.from_pretrained(os.path.join(CKPT_DIR, "feature_extractor"))
-# preprocess_cfg = {'size': 224, 'mode': 'RGB', 'mean': (0.48145466, 0.4578275, 0.40821073), 'std': (0.26862954, 0.26130258, 0.27577711), 'interpolation': 'bicubic', 'resize_mode': 'shortest', 'fill_color': 0}
-# preprocess = image_transform_v2(
-#     PreprocessCfg(**preprocess_cfg),
-#     is_train = False
-# )
-# verifier = torch.jit.load(os.path.join(CKPT_DIR, "verifier.pt"), map_location="cpu").eval()
-# verifier = build_model_from_openai_state_dict(verifier.state_dict(), cast_dtype = torch.float16).to(device)
 safety_checker = StableDiffusionSafetyChecker.from_pretrained(
     "CompVis/stable-diffusion-safety-checker"
 ).to("cuda")
