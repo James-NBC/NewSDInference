@@ -16,10 +16,7 @@ def main():
     json_request = {
         "output_path": args.output_path,
         "prompt": args.prompt,
-        "ddim_steps": 30,
-        "H": 512,
-        "W": 512,
-        "txhash": "0x343434354",
+        "seed": "0x343434354",
         "image_path": "./output.jpg",
     }
     response = requests.post(url, json=json_request)

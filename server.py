@@ -4,24 +4,34 @@ import time
 import torch
 import tempfile 
 import argparse
+import diffusers
 import numpy as np
 from PIL import Image 
 from open_clip.model import build_model_from_openai_state_dict
 from open_clip.transform import PreprocessCfg, image_transform_v2
 from flask import Flask, request, jsonify
-from diffusers import DiffusionPipeline
 from transformers import CLIPFeatureExtractor
 from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
 
-with open('inference_config.json', 'r') as f:
+with open('config.json', 'r') as f:
     CONFIG = json.load(f)
 
 app = Flask(__name__)
 
-def load_pipeline(ckpt_dir, device = None):
-    if device is None:
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-    pipeline = DiffusionPipeline.from_pretrained(os.path.join(ckpt_dir, "sdxl_lightning")).to(device)
+def load_pipeline(ckpt_dir_or_path, ckpt_type, device = "cuda"):
+    if ckpt_type == "safetensors":    
+        pipeline = diffusers.StableDiffusionXLPipeline.from_single_file(ckpt_dir_or_path).to(device)
+    elif ckpt_type == "lora":
+        base_model = CONFIG["base_model"]
+        if base_model == "SDXL1.0":
+            pipeline = diffusers.StableDiffusionXLPipeline.from_single_file("/home/xxx/base_model/sdxl_1.safetensors").to("cuda")
+            pipeline.load_lora_weights(ckpt_dir_or_path)
+        else:
+            raise ValueError(f"Unknown base model: {base_model}")
+    elif ckpt_type == "diffusers":
+        pipeline = diffusers.StableDiffusionPipeline.from_pretrained(ckpt_dir_or_path).to(device)
+    else:
+        raise ValueError(f"Unknown checkpoint type: {ckpt_type}")
     return pipeline
 
 def parse_args():
@@ -29,18 +39,17 @@ def parse_args():
     parser.add_argument("--port", type=int, default=8000, help="Port to run the server on")
     return parser.parse_args()
 
-CKPT_DIR = "checkpoints"
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-pipeline = load_pipeline(CKPT_DIR, device)
-safety_checker = StableDiffusionSafetyChecker.from_pretrained(os.path.join(CKPT_DIR, "safety_checker")).to("cuda")
+pipeline = load_pipeline(CONFIG["stable_diffusion_ckpt"], CONFIG["checkpoint_type"], device)
+safety_checker = StableDiffusionSafetyChecker.from_pretrained(CONFIG["safety_checker_ckpt"]).to("cuda")
 generator = torch.Generator(device=device)
-feature_extractor = CLIPFeatureExtractor.from_pretrained(os.path.join(CKPT_DIR, "feature_extractor"))
+feature_extractor = CLIPFeatureExtractor.from_pretrained(CONFIG["feature_extractor_ckpt"])
 preprocess_cfg = {'size': 224, 'mode': 'RGB', 'mean': (0.48145466, 0.4578275, 0.40821073), 'std': (0.26862954, 0.26130258, 0.27577711), 'interpolation': 'bicubic', 'resize_mode': 'shortest', 'fill_color': 0}
 preprocess = image_transform_v2(
     PreprocessCfg(**preprocess_cfg),
     is_train = False
 )
-verifier = torch.jit.load(os.path.join(CKPT_DIR, "verifier.pt"), map_location="cpu").eval()
+verifier = torch.jit.load(CONFIG["verifier_ckpt"], map_location="cpu").eval()
 verifier = build_model_from_openai_state_dict(verifier.state_dict(), cast_dtype = torch.float16).to(device)
 
 @app.route('/')
@@ -97,8 +106,8 @@ def generate_image():
     requested_tx_hash = json_request['seed'][2:]
     requested_seed = int(requested_tx_hash, 16) % (2**32)
     start = time.time()
-    generated_image = to_generate(prompt, CONFIG["height"], CONFIG["width"], CONFIG["num_step"], CONFIG["cfg"], requested_seed)
-    generated_image.save(output_path, compress_level= CONFIG["image_compress_level"])
+    generated_image = to_generate(prompt, CONFIG["height"], CONFIG["width"], CONFIG["diffusion_steps"], CONFIG["cfg"], requested_seed)
+    generated_image.save(output_path, optimize = True, quality = 40)
     return jsonify({"output_path": output_path, "time": time.time() - start, "seed": requested_seed})  
 
 @app.route('/verify', methods=['POST'])
@@ -109,7 +118,7 @@ def verify():
     to_verify_image_path = json_request['image_path']
     requested_seed = int(requested_tx_hash, 16) % (2**32)
     # euclid distance
-    generated_image = to_generate(prompt, CONFIG["height"], CONFIG["width"], CONFIG["num_step"], CONFIG["cfg"], requested_seed)
+    generated_image = to_generate(prompt, CONFIG["height"], CONFIG["width"], CONFIG["diffusion_steps"], CONFIG["cfg"], requested_seed)
     temp_file_path = tempfile.mkstemp(suffix= os.path.basename(to_verify_image_path))[1]
     generated_image.save(temp_file_path)
     generated_image = preprocess(Image.open(temp_file_path)).unsqueeze(0).to(device)
