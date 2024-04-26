@@ -1,12 +1,12 @@
 {
-    "checkpoint_type": "safetensors",
-    "base_model": null,
+    "checkpoint_type": "diffusers",
+    "base_model": "SDXL1.0",
     "feature_extractor_ckpt": "checkpoints/feature_extractor",
     "safety_checker_ckpt": "checkpoints/safety_checker",
-    "stable_diffusion_ckpt": "checkpoints/max_multi.safetensors",
+    "stable_diffusion_ckpt": "checkpoints/Kai_Astra",
     "verifier_ckpt": "checkpoints/verifier.pt",
-    "width": 1024,
-    "height": 1024,
+    "width": 512,
+    "height": 512,
     "cfg": 2.0,
     "diffusion_steps": 30
 }

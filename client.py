@@ -1,7 +1,7 @@
 import requests
 import argparse
 
-API_NAME = "generate_image"
+API_NAME = "verify"
 
 def parse_args():
     parser = argparse.ArgumentParser("Stable Diffusion Inference")
