@@ -17,8 +17,8 @@ def main():
         "input": {
             "prompt": args.prompt,
             "seed": "0x343434354",
-            "output_path": args.output_path,
-            "image_path": "",
+            "path": args.output_path,
+            "verify": True,
         }
     }
     response = requests.post(url, json=json_request)
