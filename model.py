@@ -1,6 +1,5 @@
 import os
 import torch
-import argparse
 import diffusers
 import numpy as np
 from PIL import Image 
@@ -9,12 +8,6 @@ from open_clip.model import build_model_from_openai_state_dict
 from open_clip.transform import PreprocessCfg, image_transform_v2
 from transformers import CLIPFeatureExtractor
 from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
-
-def parse_args():
-    parser = argparse.ArgumentParser("Stable Diffusion Inference")
-    parser.add_argument("--port", type=int, default=8000, help="Port to run the server on")
-    return parser.parse_args()
-
 
 class Verifier:
     def __init__(self, config, device = None):
