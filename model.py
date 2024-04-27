@@ -4,6 +4,7 @@ import argparse
 import diffusers
 import numpy as np
 from PIL import Image 
+import tempfile as tf
 from open_clip.model import build_model_from_openai_state_dict
 from open_clip.transform import PreprocessCfg, image_transform_v2
 from transformers import CLIPFeatureExtractor
@@ -27,10 +28,13 @@ class Verifier:
             PreprocessCfg(**self.config["preprocess_cfg"]),
             is_train = False
         )
+        self.threshold = self.config["threshold"]
 
-    def __call__(self, image1_path, image2_path, threshold = 0.995):
-        image1 = Image.open(image1_path).convert("RGB")
-        image2 = Image.open(image2_path).convert("RGB")
+    def __call__(self, image, verify_image_path):
+        temp_file_path = tf.mkstemp(suffix= os.path.basename(verify_image_path))[1]
+        image.save(temp_file_path, optimize=True, quality=40)
+        image1 = Image.open(temp_file_path).convert("RGB")
+        image2 = Image.open(verify_image_path).convert("RGB")
         image1 = self.preprocess(image1).unsqueeze(0).to(self.device)
         image2 = self.preprocess(image2).unsqueeze(0).to(self.device)
         with torch.no_grad(), torch.cuda.amp.autocast():
@@ -39,11 +43,9 @@ class Verifier:
             image_features_1 /= image_features_1.norm(dim=-1, keepdim=True)
             image_features_2 /= image_features_2.norm(dim=-1, keepdim=True)
             similarity = (image_features_1 @ image_features_2.T).mean()
-            similarity = max(float(similarity.item()), 1.0)
+            similarity = min(float(similarity.item()), 1.0)
         torch.cuda.empty_cache()
-        if similarity >= threshold:
-            return True
-        return False
+        return ((similarity >= self.threshold), similarity)
 
 
 class ImageGenerator:

@@ -1,10 +1,16 @@
 # Prediction interface for Cog ⚙️
 # https://cog.run/python
 import os
+import time
 import json
-import tempfile as tf
-from cog import BasePredictor, Input
-from model import ImageGenerator, Verifier    
+from cog import BaseModel, BasePredictor, Input
+from model import ImageGenerator, Verifier 
+
+class PredictorOutput(BaseModel):
+    output_path: str = ""
+    verify: bool = False
+    similarity: float = 0.0
+    time: float = 0.0
 
 class Predictor(BasePredictor):
     def setup(self) -> None:
@@ -21,14 +27,14 @@ class Predictor(BasePredictor):
         seed: str = Input(description="Seed for random number generator"),
         path: str = Input(description="Path to save the generated image or to check the image"),
         verify: bool = Input(description="Whether to verify the generated image", default=False)
-    ) -> bool:
-        """Generate an image from a prompt"""
+    ) -> PredictorOutput:
+        start = time.time()
         int_seed = int(seed[2:], 16) % (2**32)
         checked_image = self.model(prompt, int_seed)
-        if not verify:
-            checked_image.save(path, optimize=True, quality=40)
-        else:
-            temp_file_path = tf.mkstemp(suffix= os.path.basename(path))[1]
-            checked_image.save(temp_file_path, optimize=True, quality=40)
-            return self.verifier(path, temp_file_path)
-        return True
+        if verify:
+            is_same, o_similarity = self.verifier(checked_image, path)
+            total_time = time.time() - start
+            return PredictorOutput(verify=is_same, similarity=o_similarity, time = total_time)
+        checked_image.save(path, optimize=True, quality=40)
+        total_time = time.time() - start
+        return PredictorOutput(output_path=path, time = total_time)
