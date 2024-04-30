@@ -54,18 +54,13 @@ class ImageGenerator:
 
     def _load_pipeline(self):
         ckpt_type = self.config["checkpoint_type"]
-        ckpt_dir_or_path = self.config["stable_diffusion_ckpt"]
         if ckpt_type == "safetensors":    
-            pipeline = diffusers.StableDiffusionXLPipeline.from_single_file(ckpt_dir_or_path).to(self.device)
+            pipeline = diffusers.StableDiffusionXLPipeline.from_single_file(self.config["stable_diffusion_ckpt"]).to(self.device)
         elif ckpt_type == "lora":
-            base_model = self.config["base_model"]
-            if base_model == "SDXL1.0":
-                pipeline = diffusers.StableDiffusionXLPipeline.from_single_file("/home/xxx/base_model/sdxl_1.safetensors").to("cuda")
-                pipeline.load_lora_weights(ckpt_dir_or_path)
-            else:
-                raise ValueError(f"Unknown base model: {base_model}")
+            pipeline = diffusers.StableDiffusionXLPipeline.from_single_file(self.config["base_model_ckpt"]).to(self.device)
+            pipeline.load_lora_weights(self.config["stable_diffusion_ckpt"])
         elif ckpt_type == "diffusers":
-            pipeline = diffusers.StableDiffusionPipeline.from_pretrained(ckpt_dir_or_path).to(self.device)
+            pipeline = diffusers.StableDiffusionPipeline.from_pretrained(self.config["stable_diffusion_ckpt"]).to(self.device)
         else:
             raise ValueError(f"Unknown checkpoint type: {ckpt_type}")
         return pipeline
