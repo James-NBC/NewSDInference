@@ -2,29 +2,37 @@ import os
 import torch
 import diffusers
 import numpy as np
-from PIL import Image 
+from PIL import Image
 import tempfile as tf
 from open_clip.model import build_model_from_openai_state_dict
 from open_clip.transform import PreprocessCfg, image_transform_v2
 from transformers import CLIPFeatureExtractor
 from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
 
+
 class Verifier:
-    def __init__(self, config, device = None):
+    def __init__(self, config, device=None):
         self.device = device
         if self.device is None:
-            self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+            self.device = torch.device(
+                "cuda") if torch.cuda.is_available() else torch.device("cpu")
         self.config = config
-        self.verifier = torch.jit.load(self.config["ckpt_path"], map_location="cpu").eval()
-        self.verifier = build_model_from_openai_state_dict(self.verifier.state_dict(), cast_dtype = torch.float16).to(self.device)
+        self.verifier = torch.jit.load(
+            self.config["ckpt_path"],
+            map_location="cpu").eval()
+        self.verifier = build_model_from_openai_state_dict(
+            self.verifier.state_dict(),
+            cast_dtype=torch.float16).to(
+            self.device)
         self.preprocess = image_transform_v2(
             PreprocessCfg(**self.config["preprocess_cfg"]),
-            is_train = False
+            is_train=False
         )
         self.threshold = self.config["threshold"]
 
     def __call__(self, image, verify_image_path):
-        temp_file_path = tf.mkstemp(suffix= os.path.basename(verify_image_path))[1]
+        temp_file_path = tf.mkstemp(
+            suffix=os.path.basename(verify_image_path))[1]
         image.save(temp_file_path, optimize=True, quality=40)
         image1 = Image.open(temp_file_path).convert("RGB")
         image2 = Image.open(verify_image_path).convert("RGB")
@@ -42,31 +50,38 @@ class Verifier:
 
 
 class ImageGenerator:
-    def __init__(self, config, device = None):
-        self.device = device 
+    def __init__(self, config, device=None):
+        self.device = device
         if self.device is None:
-            self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+            self.device = torch.device(
+                "cuda") if torch.cuda.is_available() else torch.device("cpu")
         self.config = config
         self.pipeline = self._load_pipeline()
-        self.safety_checker = StableDiffusionSafetyChecker.from_pretrained(self.config["safety_checker_ckpt"]).to(self.device)
-        self.feature_extractor = CLIPFeatureExtractor.from_pretrained(self.config["feature_extractor_ckpt"])
+        self.safety_checker = StableDiffusionSafetyChecker.from_pretrained(
+            self.config["safety_checker_ckpt"]).to(self.device)
+        self.feature_extractor = CLIPFeatureExtractor.from_pretrained(
+            self.config["feature_extractor_ckpt"])
         self.generator = torch.Generator(device=self.device)
 
     def _load_pipeline(self):
         ckpt_type = self.config["checkpoint_type"]
-        if ckpt_type == "safetensors":    
-            pipeline = diffusers.StableDiffusionXLPipeline.from_single_file(self.config["stable_diffusion_ckpt"]).to(self.device)
+        if ckpt_type == "safetensors":
+            pipeline = diffusers.StableDiffusionXLPipeline.from_single_file(
+                self.config["stable_diffusion_ckpt"]).to(self.device)
         elif ckpt_type == "lora":
-            pipeline = diffusers.StableDiffusionXLPipeline.from_single_file(self.config["base_model_ckpt"]).to(self.device)
+            pipeline = diffusers.StableDiffusionXLPipeline.from_single_file(
+                self.config["base_model_ckpt"]).to(self.device)
             pipeline.load_lora_weights(self.config["stable_diffusion_ckpt"])
         elif ckpt_type == "diffusers":
-            pipeline = diffusers.StableDiffusionPipeline.from_pretrained(self.config["stable_diffusion_ckpt"]).to(self.device)
+            pipeline = diffusers.StableDiffusionPipeline.from_pretrained(
+                self.config["stable_diffusion_ckpt"]).to(self.device)
         else:
             raise ValueError(f"Unknown checkpoint type: {ckpt_type}")
         return pipeline
 
     def _check_nsfw_images(self, images):
-        safety_checker_input = self.feature_extractor(images, return_tensors="pt").to(self.device)
+        safety_checker_input = self.feature_extractor(
+            images, return_tensors="pt").to(self.device)
         images_np = [np.array(img) for img in images]
 
         _, has_nsfw_concepts = self.safety_checker(
@@ -78,13 +93,15 @@ class ImageGenerator:
     def __call__(self, prompt, seed):
         self.generator.manual_seed(seed)
         image_latents = torch.randn(
-            (1, self.pipeline.unet.config.in_channels, self.config["height"] // 8, self.config["width"] // 8),
-            generator = self.generator,
-            device = self.device
-        )
+            (1,
+             self.pipeline.unet.config.in_channels,
+             self.config["height"] // 8,
+             self.config["width"] // 8),
+            generator=self.generator,
+            device=self.device)
         pil_images = self.pipeline(
             prompt,
-            latents = image_latents,
+            latents=image_latents,
             height=self.config["height"],
             width=self.config["width"],
             guidance_scale=self.config["cfg"],
@@ -94,6 +111,7 @@ class ImageGenerator:
         has_nsfw_concepts = self._check_nsfw_images(pil_images)
         checked_image = pil_images[0]
         if has_nsfw_concepts[0]:
-            checked_image = Image.new("RGB", (self.config["height"], self.config["width"]), (0, 0, 0))
+            checked_image = Image.new(
+                "RGB", (self.config["height"], self.config["width"]), (0, 0, 0))
         torch.cuda.empty_cache()
         return checked_image
