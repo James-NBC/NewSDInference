@@ -21,9 +21,9 @@ class Predictor(BasePredictor):
         seed: int = Input(
             description="Seed for random number generator",
             default = 0),
-            output_path: str = Input(
-                description="Path to save the generated image or to check the image",
-                default = "output.jpg")) -> str:
+        output_path: str = Input(
+            description="Path to save the generated image or to check the image",
+            default = "output.jpg")) -> str:
         checked_image = self.model(prompt, seed)
         checked_image.save(output_path, optimize=True, quality=40)
         return output_path
