@@ -69,8 +69,13 @@ class ImageGenerator:
             pipeline = diffusers.StableDiffusionXLPipeline.from_single_file(
                 self.config["stable_diffusion_ckpt"]).to(self.device)
         elif ckpt_type == "lora":
-            pipeline = diffusers.StableDiffusionPipeline.from_single_file(
-                self.config["base_model_ckpt"]).to(self.device)
+            base_name = os.path.basename(self.config["base_model_ckpt"])
+            if base_name == "sdxl":
+                pipeline = diffusers.StableDiffusionXLPipeline.from_single_file(
+                    self.config["base_model_ckpt"]).to(self.device)
+            else:
+                pipeline = diffusers.StableDiffusionPipeline.from_pretrained(
+                    self.config["base_model_ckpt"]).to(self.device)
             pipeline.load_lora_weights(self.config["stable_diffusion_ckpt"])
         elif ckpt_type == "diffusers":
             pipeline = diffusers.StableDiffusionPipeline.from_pretrained(

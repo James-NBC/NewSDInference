@@ -1,5 +1,0 @@
-torch
-diffusers
-transformers
-peft
-open-clip-torch

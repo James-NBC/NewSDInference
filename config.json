@@ -2,7 +2,7 @@
     "stable_diffusion_cfg": {
         "checkpoint_type": "lora",
         "stable_diffusion_ckpt": "checkpoints/GameMap.safetensors",
-        "base_model_ckpt": "checkpoints/base_model.safetensors",
+        "base_model_ckpt": "checkpoints/sdxl.safetensors",
         "feature_extractor_ckpt": "checkpoints/feature_extractor",
         "safety_checker_ckpt": "checkpoints/safety_checker",
         "diffusion_steps": 30,
