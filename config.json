@@ -1,21 +1,30 @@
 {
-    "stable_diffusion_cfg":{
-        "checkpoint_type": "safetensors",
-        "stable_diffusion_ckpt": "checkpoints/max_multi.safetensors",
+    "stable_diffusion_cfg": {
+        "checkpoint_type": "lora",
+        "stable_diffusion_ckpt": "checkpoints/GameMap.safetensors",
+        "base_model_ckpt": "checkpoints/base_model.safetensors",
         "feature_extractor_ckpt": "checkpoints/feature_extractor",
         "safety_checker_ckpt": "checkpoints/safety_checker",
-        "width": 1024,
-        "height": 1024,
+        "diffusion_steps": 30,
         "cfg": 2.0,
-        "diffusion_steps": 30
+        "width": 1024,
+        "height": 1024
     },
-    "verifier_cfg":{
+    "verifier_cfg": {
         "ckpt_path": "checkpoints/verifier.pt",
-        "preprocess_cfg":{
+        "preprocess_cfg": {
             "size": 224,
             "mode": "RGB",
-            "mean": [0.48145466, 0.4578275, 0.40821073],
-            "std": [0.26862954, 0.26130258, 0.27577711],
+            "mean": [
+                0.48145466,
+                0.4578275,
+                0.40821073
+            ],
+            "std": [
+                0.26862954,
+                0.26130258,
+                0.27577711
+            ],
             "interpolation": "bicubic",
             "resize_mode": "shortest",
             "fill_color": 0

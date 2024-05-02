@@ -3,8 +3,8 @@
 import os
 import time
 import json
-from cog import BaseModel, BasePredictor, Input
 from model import ImageGenerator, Verifier
+from cog import BaseModel, BasePredictor, Input
 
 
 class PredictorOutput(BaseModel):
@@ -27,16 +27,17 @@ class Predictor(BasePredictor):
         self,
         prompt: str = Input(
             description="Prompt to generate an image from"),
-        seed: str = Input(
-            description="Seed for random number generator"),
+        seed: int = Input(
+            description="Seed for random number generator",
+            default = 0),
             path: str = Input(
-                description="Path to save the generated image or to check the image"),
+                description="Path to save the generated image or to check the image",
+                default = "output.jpg"),
         verify: bool = Input(
             description="Whether to verify the generated image",
             default=False)) -> PredictorOutput:
         start = time.time()
-        int_seed = int(seed[2:], 16) % (2**32)
-        checked_image = self.model(prompt, int_seed)
+        checked_image = self.model(prompt, seed)
         if verify:
             is_same, o_similarity = self.verifier(checked_image, path)
             total_time = time.time() - start

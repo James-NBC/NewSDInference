@@ -69,7 +69,7 @@ class ImageGenerator:
             pipeline = diffusers.StableDiffusionXLPipeline.from_single_file(
                 self.config["stable_diffusion_ckpt"]).to(self.device)
         elif ckpt_type == "lora":
-            pipeline = diffusers.StableDiffusionXLPipeline.from_single_file(
+            pipeline = diffusers.StableDiffusionPipeline.from_single_file(
                 self.config["base_model_ckpt"]).to(self.device)
             pipeline.load_lora_weights(self.config["stable_diffusion_ckpt"])
         elif ckpt_type == "diffusers":
