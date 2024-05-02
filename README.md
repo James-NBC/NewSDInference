@@ -1,2 +1,0 @@
-# NewSDInference
-New SD Inference

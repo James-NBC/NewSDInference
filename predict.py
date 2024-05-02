@@ -1,17 +1,9 @@
 # Prediction interface for Cog ⚙️
 # https://cog.run/python
 import os
-import time
 import json
-from model import ImageGenerator, Verifier
-from cog import BaseModel, BasePredictor, Input
-
-
-class PredictorOutput(BaseModel):
-    output_path: str = ""
-    verify: bool = False
-    similarity: float = 0.0
-    time: float = 0.0
+from model import ImageGenerator
+from cog import BasePredictor, Input
 
 
 class Predictor(BasePredictor):
@@ -20,8 +12,7 @@ class Predictor(BasePredictor):
         assert os.path.exists('config.json'), "config.json not found"
         with open('config.json', 'r') as f:
             config = json.load(f)
-        self.model = ImageGenerator(config["stable_diffusion_cfg"])
-        self.verifier = Verifier(config["verifier_cfg"])
+        self.model = ImageGenerator(config)
 
     def predict(
         self,
@@ -30,21 +21,9 @@ class Predictor(BasePredictor):
         seed: int = Input(
             description="Seed for random number generator",
             default = 0),
-            path: str = Input(
+            output_path: str = Input(
                 description="Path to save the generated image or to check the image",
-                default = "output.jpg"),
-        verify: bool = Input(
-            description="Whether to verify the generated image",
-            default=False)) -> PredictorOutput:
-        start = time.time()
+                default = "output.jpg")) -> str:
         checked_image = self.model(prompt, seed)
-        if verify:
-            is_same, o_similarity = self.verifier(checked_image, path)
-            total_time = time.time() - start
-            return PredictorOutput(
-                verify=is_same,
-                similarity=o_similarity,
-                time=total_time)
-        checked_image.save(path, optimize=True, quality=40)
-        total_time = time.time() - start
-        return PredictorOutput(output_path=path, time=total_time)
+        checked_image.save(output_path, optimize=True, quality=40)
+        return output_path

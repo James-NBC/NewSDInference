@@ -17,9 +17,7 @@ build:
   python_packages:
     - "torch"
     - "diffusers"
-    - "transformers"
     - "peft"
-    - "open-clip-torch"
 
   # commands run after the environment is setup
   # run:
