@@ -1,6 +1,5 @@
 import os
 import torch
-import shutil
 import diffusers
 
 class ImageGenerator:
@@ -19,14 +18,12 @@ class ImageGenerator:
             pipeline = diffusers.StableDiffusionXLPipeline.from_single_file(
                 self.config["stable_diffusion_ckpt"]).to(self.device)
         elif ckpt_type == "lora":
-            base_model = self.config["base_model"]
-            base_model_ckpt = os.path.join("checkpoints", base_model + ".safetensors")
-            if base_model == "SDXL1.0":
-                shutil.copy("/home/xxx/base_model/sdxl_1.safetensors", base_model_ckpt)
+            base_model_ckpt = self.config["base_model_ckpt"]
+            base_model = os.path.basename(base_model_ckpt).split("_")[0]
+            if base_model == "sdxl":
                 pipeline = diffusers.StableDiffusionXLPipeline.from_single_file(
                     base_model_ckpt).to(self.device)
             else:
-                shutil.copy("/home/xxx/base_model/sd_15.safetensors", base_model_ckpt)
                 pipeline = diffusers.StableDiffusionPipeline.from_pretrained(
                     base_model_ckpt).to(self.device)
             pipeline.load_lora_weights(self.config["stable_diffusion_ckpt"])
