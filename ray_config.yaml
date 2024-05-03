@@ -1,0 +1,18 @@
+proxy_location: EveryNode
+
+http_options:
+  host: 0.0.0.0
+  port: 5000
+
+applications:
+
+- name: ImageGeneratorApp
+  route_prefix: /
+  import_path: serve:image_generator_app
+  runtime_env: {}
+  deployments:
+  - name: RayImageGenerator
+    num_replicas: 1
+    ray_actor_options:
+      num_cpus: 1.0
+      num_gpus: 1.0

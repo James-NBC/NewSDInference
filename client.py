@@ -5,9 +5,10 @@ json_request = {
     "prompt": "A beautiful landscape painting",
     "seed": 10,
     "output_path": "output.jpg",
+    "steps": 5,
 }
 
-response = requests.post("http://127.0.0.1:8000/", json=json_request)
-json_respone = response.json
+response = requests.post("http://127.0.0.1:5000/", json=json_request)
+json_respone = response.json()
 
 print(json_respone)

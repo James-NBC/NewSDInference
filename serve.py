@@ -1,18 +1,17 @@
 import os
+import time
 import json
 from ray import serve
 from model import ImageGenerator
 from starlette.requests import Request
 
-@serve.deployment(num_replicas=2, ray_actor_options={"num_cpus": 0.2, "num_gpus": 0.2})
+@serve.deployment
 class RayImageGenerator:
-    def __init__(self):
-        assert os.path.exists("config.json"), "config.json not found"
-        with open("config.json", "r") as f:
-            config = json.load(f)
+    def __init__(self, config):
         self.model = ImageGenerator(config)
 
     async def __call__(self, http_request: Request) -> str:
+        start = time.time()
         json_request = await http_request.json()
         prompt = json_request["prompt"]
         seed = json_request["seed"]
@@ -23,6 +22,9 @@ class RayImageGenerator:
         cfg = json_request.get("cfg", None)
         generated_image = self.model(prompt, seed, h, w, steps, cfg)
         generated_image.save(output_path, optimized = True, quality = 40)
-        return output_path
+        return {"output_path": output_path, "inference_time": time.time() - start}
 
-image_generator_app = RayImageGenerator.bind()
+assert os.path.exists("config.json"), "config.json not found"
+with open("config.json", "r") as f:
+    config = json.load(f)
+image_generator_app = RayImageGenerator.bind(config)
