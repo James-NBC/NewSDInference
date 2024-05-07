@@ -47,5 +47,4 @@ class ImageGenerator:
             num_inference_steps=steps,
         ).images
         checked_image = pil_images[0]
-        torch.cuda.empty_cache()
         return checked_image
