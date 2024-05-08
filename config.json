@@ -3,7 +3,7 @@
     "model_ckpt": "checkpoints/maxmulti.safetensors",
     "base_model_ckpt": null,
     "steps": 30,
-    "cfg": 2.0,
-    "width": 1024,
-    "height": 1024
+    "cfg": 7.5,
+    "width": 512,
+    "height": 512
 }

@@ -8,7 +8,8 @@ json_request = {
     "steps": 5,
 }
 
-response = requests.post("http://127.0.0.1:5000/", json=json_request)
+response = requests.post("http://127.0.0.1:8000/", json=json_request)
 json_respone = response.json()
 
-print(json_respone)
+with open("dummy_result.json", "wb") as f:
+    f.write(response.content)
