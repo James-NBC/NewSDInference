@@ -2,9 +2,13 @@
 # https://cog.run/python
 import os
 import json
+import time
 from model import ImageGenerator
-from cog import BasePredictor, Input
+from cog import BasePredictor, Input, 
 
+class PredictorOutput(BaseModel):
+    result: str
+    inference_time: float
 
 class Predictor(BasePredictor):
     def setup(self) -> None:
@@ -36,7 +40,10 @@ class Predictor(BasePredictor):
         output_path: str = Input(
             description="Path to save the generated image or to check the image",
             default="output.jpg")
-    ) -> str:
+    ) -> PredictorOutput:
+        start = time.time()
         checked_image = self.model(prompt, seed, h, w, steps, cfg)
-        checked_image.save(output_path, optimize=True, quality=40)
-        return output_path
+        buffered = BytesIO()
+        checked_image.save(buffered, format="PNG")
+        base64_image = base64.b64encode(buffered.getvalue()).decode()
+        return PredictorOutput(result=base64_image, inference_time= time.time() - start)
