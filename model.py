@@ -9,6 +9,7 @@ class ImageGenerator:
             self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         self.config = config
         self.pipeline = self._load_pipeline()
+        self.pipeline.unet = torch.compile(self.pipeline.unet, mode="reduce-overhead", fullgraph=True)
         self.generator = torch.Generator(device=self.device)
 
     def _load_pipeline(self):
