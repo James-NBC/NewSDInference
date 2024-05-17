@@ -11,12 +11,12 @@ class ImageGenerator:
         if self.device is None:
             self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         self.config = config
-        self.pipeline = self._load_pipeline()
         self.generator = torch.Generator(device=self.device)
-        model_url = self.config["base_model_ckpt"]
+        model_url = self.config["model_ckpt"]
         if not os.path.exists("checkpoints"):
             os.makedirs("checkpoints")
         gdown.download(model_url, "checkpoints/model.safetensors", quiet=False)
+        self.pipeline = self._load_pipeline()
 
     def _load_pipeline(self):
         dtype = torch.float32 if self.config["torch_dtype"] == "float32" else torch.float16
