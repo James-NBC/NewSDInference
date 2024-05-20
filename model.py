@@ -1,5 +1,4 @@
 import os
-import gdown
 import torch
 import diffusers
 
@@ -15,7 +14,8 @@ class ImageGenerator:
         model_url = self.config["model_ckpt"]
         if not os.path.exists("checkpoints"):
             os.makedirs("checkpoints")
-        gdown.download(model_url, "checkpoints/model.safetensors", quiet=False)
+        # gdown.download(model_url, "checkpoints/model.safetensors", quiet=False)
+        os.system(f"wget {model_url} -O checkpoints/model.safetensors")
         self.pipeline = self._load_pipeline()
 
     def _load_pipeline(self):
