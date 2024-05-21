@@ -30,7 +30,11 @@ applications:
   runtime_env:
     working_dir: "https://github.com/James-NBC/NewSDInference/archive/with_ray.zip"
     pip:  
-      - requirements.txt
+      - "torch==2.3.0"
+      - "transformers==4.41.0"
+      - "peft==0.11.1"
+      - "diffusers==0.27.2"
+      - "loguru==0.7.2"
   deployments:
   - name: RayImageGenerator
     num_replicas: 1
