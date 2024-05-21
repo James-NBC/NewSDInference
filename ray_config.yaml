@@ -28,7 +28,7 @@ applications:
   route_prefix: /generate_image
   import_path: serve:app
   runtime_env:
-    working_dir: "https://github.com/James-NBC/NewSDInference/archive/with_ray.zip"
+    working_dir: "https://storage.googleapis.com/eternal-ai/JamesNBC/maxmulti.zip"
     pip:  
       - "torch==2.3.0"
       - "transformers==4.41.0"
