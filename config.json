@@ -1,10 +1,14 @@
 {
     "checkpoint_type": "safetensors",
-    "model_ckpt": "checkpoints/SDXL1.0.safetensors",
+    "model_ckpt": "checkpoints/model.safetensors",
     "base_model_ckpt": null,
-    "sd_type": null,
-    "steps": 8,
-    "cfg": 0,
+    "sd_type": "XL",
+    "torch_dtype": "float32",
+    "vae": null,
+    "seed": 42,
+    "steps": 30,
+    "cfg": 2.0,
     "width": 1024,
-    "height": 1024
+    "height": 1024,
+    "clip_skip": null
 }

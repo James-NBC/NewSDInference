@@ -30,7 +30,7 @@ class Predictor(BasePredictor):
             description="Prompt to generate an image from"),
         seed: int = Input(
             description="Seed for random number generator",
-            default=0),
+            default=None),
         h: int = Input(
             description="Height of the image",
             default=None),
@@ -58,4 +58,3 @@ class Predictor(BasePredictor):
         checked_image.save(output_path)
         logger.info(f"Image saved to {output_path}")
         return PredictorOutput(inference_time= time.time() - start, output_path=output_path)
-        
